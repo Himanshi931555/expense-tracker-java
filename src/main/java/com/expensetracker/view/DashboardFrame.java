@@ -9,6 +9,7 @@ import com.expensetracker.model.TransactionType;
 import com.expensetracker.model.User;
 import com.expensetracker.service.BudgetService;
 import com.expensetracker.service.ExportService;
+import com.expensetracker.service.RecurringService;
 import com.expensetracker.service.ReportService;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLaf;
@@ -20,6 +21,8 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -47,6 +50,7 @@ public class DashboardFrame extends JFrame {
     private final CategoryDAO categoryDAO = new CategoryDAO();
     private final ReportService reportService = new ReportService();
     private final ExportService exportService = new ExportService();
+    private final RecurringService recurringService = new RecurringService();
 
     private List<Transaction> allTxns = new ArrayList<>();
     private List<Transaction> visibleTxns = new ArrayList<>();
@@ -58,6 +62,7 @@ public class DashboardFrame extends JFrame {
     private final JLabel balanceValue = new JLabel("0");
     private JPanel balanceCard;
     private BudgetPanel budgetPanel;
+    private RecurringPanel recurringPanel;
 
     private final DefaultTableModel tableModel = new DefaultTableModel(
             new String[]{"ID", "Date", "Type", "Category", "Amount", "Description"}, 0) {
@@ -89,6 +94,15 @@ public class DashboardFrame extends JFrame {
         setContentPane(root);
 
         refresh();
+
+        recurringService.start(user.getUserId(),
+                added -> SwingUtilities.invokeLater(this::refresh));
+
+        addWindowListener(new WindowAdapter() {
+            @Override public void windowClosing(WindowEvent e) {
+                recurringService.stop();
+            }
+        });
     }
 
     // ---------- UI building ----------
@@ -118,6 +132,7 @@ public class DashboardFrame extends JFrame {
             FlatLaf.updateUI();
         });
         logoutBtn.addActionListener(e -> {
+            recurringService.stop();
             new LoginFrame().setVisible(true);
             dispose();
         });
@@ -163,6 +178,9 @@ public class DashboardFrame extends JFrame {
 
         budgetPanel = new BudgetPanel(user);
         tabs.addTab("Budgets", budgetPanel);
+
+        recurringPanel = new RecurringPanel(user);
+        tabs.addTab("Recurring", recurringPanel);
         return tabs;
     }
 
@@ -246,6 +264,7 @@ public class DashboardFrame extends JFrame {
             buildCharts();
             buildReport();
             budgetPanel.refresh();
+            recurringPanel.refresh();
         } catch (Exception ex) {
             showError(ex);
         }

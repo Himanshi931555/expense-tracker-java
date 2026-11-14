@@ -66,6 +66,20 @@ public class DBConnection {
                     FOREIGN KEY (category_id) REFERENCES categories(category_id),
                     UNIQUE (user_id, category_id, month_year)
                 )""");
+
+            st.execute("""
+                CREATE TABLE IF NOT EXISTS recurring (
+                    rec_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    category_id INTEGER NOT NULL,
+                    amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
+                    type TEXT NOT NULL CHECK (type IN ('INCOME','EXPENSE')),
+                    description TEXT,
+                    frequency TEXT NOT NULL CHECK (frequency IN ('MONTHLY','WEEKLY')),
+                    next_date TEXT NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+                    FOREIGN KEY (category_id) REFERENCES categories(category_id)
+                )""");
         }
     }
 }
