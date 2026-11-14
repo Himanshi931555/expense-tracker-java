@@ -7,6 +7,7 @@ import com.expensetracker.model.Category;
 import com.expensetracker.model.Transaction;
 import com.expensetracker.model.TransactionType;
 import com.expensetracker.model.User;
+import com.expensetracker.service.BudgetService;
 import com.expensetracker.service.ExportService;
 import com.expensetracker.service.ReportService;
 import com.formdev.flatlaf.FlatDarkLaf;
@@ -56,6 +57,7 @@ public class DashboardFrame extends JFrame {
     private final JLabel expenseValue = new JLabel("0");
     private final JLabel balanceValue = new JLabel("0");
     private JPanel balanceCard;
+    private BudgetPanel budgetPanel;
 
     private final DefaultTableModel tableModel = new DefaultTableModel(
             new String[]{"ID", "Date", "Type", "Category", "Amount", "Description"}, 0) {
@@ -158,6 +160,9 @@ public class DashboardFrame extends JFrame {
         reportPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         reportPanel.add(new JScrollPane(reportTable), BorderLayout.CENTER);
         tabs.addTab("Monthly Report", reportPanel);
+
+        budgetPanel = new BudgetPanel(user);
+        tabs.addTab("Budgets", budgetPanel);
         return tabs;
     }
 
@@ -240,6 +245,7 @@ public class DashboardFrame extends JFrame {
             applyFilters();
             buildCharts();
             buildReport();
+            budgetPanel.refresh();
         } catch (Exception ex) {
             showError(ex);
         }
@@ -416,6 +422,14 @@ public class DashboardFrame extends JFrame {
                     amount, type, date, descField.getText().trim());
             if (existing == null) txnDAO.add(t); else txnDAO.update(t);
             refresh();
+            if (type == TransactionType.EXPENSE) {
+                String warning = new BudgetService().checkWarning(
+                        user.getUserId(), cat.getCategoryId(), cat.getName(), date);
+                if (warning != null) {
+                    JOptionPane.showMessageDialog(this, warning, "Budget Alert",
+                            JOptionPane.WARNING_MESSAGE);
+                }
+            }
         } catch (InvalidAmountException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Invalid", JOptionPane.WARNING_MESSAGE);
         } catch (Exception ex) {
